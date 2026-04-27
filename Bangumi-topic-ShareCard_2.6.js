@@ -100,26 +100,63 @@
             font-weight: 600;
             line-height: 1.4;    /* 新增，改善多行行距 */
         }
-        .content-box { background: #1a1a1a; padding: 20px; border-radius: 24px; position: relative; }
+        /* 补充：为了保险，确保 content-box 本身没有负边距干扰 */
+        .content-box {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 24px;
+            position: relative;
+            margin-bottom: 0;          /* 明确底部边距 */
+        }
         .content-box.hover-visible::after, .content-box:hover::after {
             content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             border: 1px solid #F09199; border-radius: 24px; pointer-events: none;
         }
         .content-text { font-size: 14px; color: #fff; line-height: 1.8; white-space: pre-wrap; word-break: break-word;}
-        .tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+        /* 修改后的 tags-container 样式 */
+        .tags-container {
+            display: block;            /* 确保它是块级元素以应用外边距 */
+            margin-top: 20px;          /* 这里设置与 content-box 之间的间距，建议 20px 视觉效果更好 */
+            text-align: left;          /* 确保标签左对齐 */
+            line-height: 1.5;          /* 给予标签换行时的行间距 */
+        }
+        /* 修改后的 tag-item 样式 */
         .tag-item {
             background: #FEEFF0;
             color: #F09199;
             font-size: 12px;
-            padding: 6px 12px;
+            padding: 0 12px;           /* 取消上下 padding，靠 line-height 撑起 */
             border-radius: 20px;
             font-weight: bold;
             border: 1px solid #F0919944;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            backface-visibility: hidden;   /* 新增 */
-            transform: translateZ(0);      /* 新增，强制GPU渲染 */
+            display: inline-block;
+            height: 28px;              /* 显式设置高度 */
+            line-height: 26px;         /* 略小于高度，确保文字垂直居中 */
+            vertical-align: middle;
+            white-space: nowrap;
+            margin-bottom: 4px;        /* 防止换行时挤在一起 */
+        }
+
+        /* 统一内部元素的对齐 */
+        .tag-item span {
+            display: inline-block;
+            vertical-align: top;       /* 改用 top 配合 line-height 往往比 middle 在截图时更稳 */
+            line-height: 26px;
+        }
+
+        /* 表情图标专用对齐补丁 */
+        .tag-item .like-emoji {
+            width: 16px;
+            height: 16px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            margin-top: 5px;           /* 手动微调垂直居中（(26-16)/2 = 5px） */
+            margin-right: 4px;
+        }
+
+        /* 文字部分 */
+        .tag-item .tag-text {
+            display: inline-block;
         }
         .card-footer { position: relative;background: rgba(40,40,40,0.85); padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
         .card-footer::before {
@@ -138,14 +175,7 @@
         #loading-info { position: fixed; top: 55%; left: 50%; transform: translateX(-50%); color: #fff; z-index: 100001; }
         .copy-success { position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 12px 20px; border-radius: 8px; z-index: 100002; }
         /* 让 tag 内的表情图标整齐显示 */
-        .tag-item .like-emoji {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            vertical-align: middle;
-        }
+
     `;
     document.head.appendChild(style);
 
@@ -288,9 +318,10 @@
 
         // 构建 tags（小组 + 回复 + 点赞表情）
         let tagsHtml = `
-            <span class="tag-item">#${groupName}</span>
-            <span class="tag-item">#${replyCount}回复</span>
+            <span class="tag-item"><span class="tag-text">#${groupName}</span></span>
+            <span class="tag-item"><span class="tag-text">#${replyCount}回复</span></span>
         `;
+
         for (let i = 0; i < likeItems.length; i++) {
             const item = likeItems[i];
             const emojiBase64 = base64Emojis[i];
@@ -298,11 +329,12 @@
                 tagsHtml += `
                     <span class="tag-item">
                         <span class="like-emoji" style="background-image: url('${emojiBase64}');"></span>
-                        <span>${item.count}</span>
+                        <span class="tag-text">${item.count}</span>
                     </span>
                 `;
             } else {
-                tagsHtml += `<span class="tag-item">👍 ${item.count}</span>`;
+                // 即使是纯文字 👍 也要包装
+                tagsHtml += `<span class="tag-item"><span class="tag-text">👍 ${item.count}</span></span>`;
             }
         }
         const finalTagsHtml = `<div class="tags-container">${tagsHtml}</div>`;
